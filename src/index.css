@@ -169,6 +169,21 @@
   .markdown-body .katex {
     @apply text-apple-gray-900;
   }
+
+  /* 大纲点击高亮效果 */
+  .outline-highlight {
+    @apply ring-2 ring-apple-blue ring-offset-2 rounded transition-all duration-300;
+    animation: outline-pulse 2s ease-out;
+  }
+
+  @keyframes outline-pulse {
+    0%, 100% {
+      @apply ring-apple-blue/20;
+    }
+    50% {
+      @apply ring-apple-blue;
+    }
+  }
 }
 
 /* ===== 打印样式 (PDF 导出专用) ===== */

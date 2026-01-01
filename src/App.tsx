@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { FileText, Download, GripVertical } from 'lucide-react';
+import { FileText, Download, GripVertical, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
+import FileExplorer from './components/FileExplorer';
+import DocumentOutline from './components/DocumentOutline';
 
 const DEFAULT_CONTENT = `# 欢迎使用 MarkTeX
 
@@ -77,12 +79,29 @@ function hello() {
 开始编辑你的文档吧！
 `;
 
+// 虚拟文件系统接口
+interface VirtualFile {
+  id: string;
+  content: string;
+  blob?: string; // Blob URL for images
+}
+
 function App() {
+  // 虚拟文件系统状态
+  const [fileSystem, setFileSystem] = useState<Record<string, VirtualFile>>({
+    'main.md': { id: 'main.md', content: DEFAULT_CONTENT }
+  });
+  const [currentFile, setCurrentFile] = useState('main.md');
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [leftWidth, setLeftWidth] = useState(50);
   const [isResizing, setIsResizing] = useState(false);
+  const sidebarWidth = 250;
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [sidebarSplitHeight, setSidebarSplitHeight] = useState(50); // 侧边栏分割百分比
+  const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // PDF 导出功能
   const handlePrint = useReactToPrint({
@@ -160,11 +179,108 @@ function App() {
     };
   }, [isResizing, handleMouseMove, handleMouseUp]);
 
+  // 保存当前文件内容并切换文件
+  const handleFileSelect = (fileId: string, fileContent: string) => {
+    // 保存当前文件内容到文件系统
+    if (currentFile) {
+      setFileSystem(prev => ({
+        ...prev,
+        [currentFile]: { ...prev[currentFile], content }
+      }));
+    }
+    
+    // 切换到新文件
+    setCurrentFile(fileId);
+    setContent(fileContent);
+  };
+
+  // 更新文件系统中的文件内容
+  const handleFileUpdate = (fileId: string, fileContent: string) => {
+    setFileSystem(prev => ({
+      ...prev,
+      [fileId]: { 
+        ...prev[fileId], 
+        id: fileId, 
+        content: fileContent,
+        // 对于图片，content 即 Blob URL，将其同时写入 blob 字段
+        blob: fileContent
+      }
+    }));
+    
+    if (fileId === currentFile) {
+      setContent(fileContent);
+    }
+  };
+  
+  // 当编辑器内容改变时，实时更新文件系统
+  const handleContentChange = (newContent: string) => {
+    setContent(newContent);
+    setFileSystem(prev => ({
+      ...prev,
+      [currentFile]: { ...prev[currentFile], content: newContent }
+    }));
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarCollapsed(!isSidebarCollapsed);
+  };
+
+  // 侧边栏垂直分割调整
+  const handleSidebarResizeStart = useCallback(() => {
+    setIsSidebarResizing(true);
+  }, []);
+
+  const handleSidebarResizeMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isSidebarResizing || !sidebarRef.current) return;
+
+      const sidebarRect = sidebarRef.current.getBoundingClientRect();
+      const newHeight = ((e.clientY - sidebarRect.top) / sidebarRect.height) * 100;
+
+      // 限制最小和最大高度（20% - 80%）
+      if (newHeight >= 20 && newHeight <= 80) {
+        setSidebarSplitHeight(newHeight);
+      }
+    },
+    [isSidebarResizing]
+  );
+
+  const handleSidebarResizeEnd = useCallback(() => {
+    setIsSidebarResizing(false);
+  }, []);
+
+  // 添加和移除侧边栏调整事件监听
+  useEffect(() => {
+    if (isSidebarResizing) {
+      window.addEventListener('mousemove', handleSidebarResizeMove);
+      window.addEventListener('mouseup', handleSidebarResizeEnd);
+    } else {
+      window.removeEventListener('mousemove', handleSidebarResizeMove);
+      window.removeEventListener('mouseup', handleSidebarResizeEnd);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleSidebarResizeMove);
+      window.removeEventListener('mouseup', handleSidebarResizeEnd);
+    };
+  }, [isSidebarResizing, handleSidebarResizeMove, handleSidebarResizeEnd]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-apple-gray-50 to-apple-gray-100">
       {/* 顶部导航栏 - 毛玻璃效果 */}
       <header className="glass-effect border-b border-apple-gray-200/50 px-6 py-4 flex items-center justify-between no-print shadow-apple z-10">
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleSidebar}
+            className="p-2 hover:bg-apple-gray-100 rounded-lg transition-colors"
+            title={isSidebarCollapsed ? '显示侧边栏' : '隐藏侧边栏'}
+          >
+            {isSidebarCollapsed ? (
+              <PanelLeft className="w-5 h-5 text-apple-gray-600" />
+            ) : (
+              <PanelLeftClose className="w-5 h-5 text-apple-gray-600" />
+            )}
+          </button>
           <div className="w-10 h-10 bg-gradient-to-br from-apple-blue to-blue-500 rounded-apple flex items-center justify-center shadow-apple">
             <FileText className="w-5 h-5 text-white" />
           </div>
@@ -185,36 +301,80 @@ function App() {
         </div>
       </header>
 
-      {/* 主内容区 - 左右分栏 */}
-      <div
-        ref={containerRef}
-        className="flex-1 flex overflow-hidden relative"
-      >
-        {/* 左侧编辑器 */}
-        <div
-          className="overflow-hidden"
-          style={{ width: `${leftWidth}%` }}
-        >
-          <div className="h-full p-4">
-            <Editor value={content} onChange={setContent} />
+      {/* 主内容区 */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 左侧边栏 */}
+        {!isSidebarCollapsed && (
+          <div
+            ref={sidebarRef}
+            className="border-r border-apple-gray-200 bg-white flex flex-col no-print"
+            style={{ width: `${sidebarWidth}px` }}
+          >
+            {/* 文件浏览器 */}
+            <div 
+              className="overflow-hidden"
+              style={{ height: `${sidebarSplitHeight}%` }}
+            >
+              <FileExplorer
+                currentFile={currentFile}
+                onFileSelect={handleFileSelect}
+                onFileUpdate={handleFileUpdate}
+              />
+            </div>
+
+            {/* 垂直调整手柄 */}
+            <div
+              className="relative h-1 bg-apple-gray-200 cursor-row-resize hover:bg-apple-blue transition-colors duration-200 flex items-center justify-center group"
+              onMouseDown={handleSidebarResizeStart}
+            >
+              <div className="w-12 h-1 bg-apple-gray-300 rounded-full group-hover:bg-apple-blue group-hover:h-1.5 transition-all" />
+            </div>
+
+            {/* 文档大纲 */}
+            <div 
+              className="overflow-hidden"
+              style={{ height: `${100 - sidebarSplitHeight}%` }}
+            >
+              <DocumentOutline
+                content={content}
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* 分割线 */}
-        <div
-          className="resizer flex items-center justify-center no-print"
-          onMouseDown={handleMouseDown}
-        >
-          <GripVertical className="w-4 h-4 text-apple-gray-400 pointer-events-none" />
-        </div>
+        {/* 右侧主编辑区 */}
+        <div className="flex-1 flex overflow-hidden">
+          <div
+            ref={containerRef}
+            className="flex-1 flex overflow-hidden relative"
+          >
+            {/* 左侧编辑器 */}
+            <div
+              className="overflow-hidden"
+              style={{ width: `${leftWidth}%` }}
+            >
+              <div className="h-full p-4">
+                <Editor value={content} onChange={handleContentChange} />
+              </div>
+            </div>
 
-        {/* 右侧预览 */}
-        <div
-          className="overflow-auto"
-          style={{ width: `${100 - leftWidth}%` }}
-        >
-          <div ref={printRef}>
-            <Preview content={content} />
+            {/* 分割线 */}
+            <div
+              className="resizer flex items-center justify-center no-print"
+              onMouseDown={handleMouseDown}
+            >
+              <GripVertical className="w-4 h-4 text-apple-gray-400 pointer-events-none" />
+            </div>
+
+            {/* 右侧预览 */}
+            <div
+              className="overflow-auto"
+              style={{ width: `${100 - leftWidth}%` }}
+            >
+              <div ref={printRef}>
+                <Preview content={content} fileSystem={fileSystem} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -224,9 +384,6 @@ function App() {
         <div className="flex items-center gap-4">
           <span>字符数: {content.length}</span>
           <span>行数: {content.split('\n').length}</span>
-        </div>
-        <div>
-          由 React + KaTeX 驱动
         </div>
       </footer>
     </div>
