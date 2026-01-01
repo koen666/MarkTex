@@ -1,0 +1,310 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== 基础样式 ===== */
+@layer base {
+  * {
+    @apply antialiased;
+  }
+
+  body {
+    @apply font-sans bg-apple-gray-50 text-apple-gray-900;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* KaTeX 字体全局样式 */
+  .katex {
+    font-size: 1.1em !important;
+  }
+}
+
+/* ===== Glassmorphism 毛玻璃效果 ===== */
+@layer components {
+  .glass-effect {
+    @apply bg-white/70 backdrop-blur-apple;
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  .glass-effect-dark {
+    @apply bg-apple-gray-900/80 backdrop-blur-apple text-white;
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* Apple 风格按钮 */
+  .btn-apple {
+    @apply px-6 py-2.5 rounded-full font-medium transition-all duration-200;
+    @apply bg-apple-blue text-white shadow-apple;
+    @apply hover:bg-apple-blue-dark hover:shadow-apple-lg hover:scale-[1.02];
+    @apply active:scale-[0.98];
+  }
+
+  .btn-apple-secondary {
+    @apply px-6 py-2.5 rounded-full font-medium transition-all duration-200;
+    @apply bg-apple-gray-100 text-apple-gray-900 shadow-sm;
+    @apply hover:bg-apple-gray-200 hover:scale-[1.02];
+    @apply active:scale-[0.98];
+  }
+
+  /* A4 纸张预览效果 */
+  .preview-paper {
+    @apply bg-white rounded-apple-lg shadow-paper;
+    width: 19cm;
+    min-height: 27cm;
+    padding: 2cm;
+    margin: 1.5rem auto;
+    box-sizing: border-box;
+    transform: scale(0.95);
+    transform-origin: top center;
+    
+    /* 模拟真实纸张的细节 */
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  /* 编辑器容器样式 */
+  .editor-container {
+    @apply bg-apple-gray-50 rounded-apple border border-apple-gray-200;
+    @apply shadow-sm;
+  }
+
+  /* 分割线样式 */
+  .resizer {
+    @apply relative w-1 bg-apple-gray-200 cursor-col-resize;
+    @apply hover:bg-apple-blue transition-colors duration-200;
+  }
+
+  .resizer::before {
+    content: '';
+    @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2;
+    @apply w-1 h-12 bg-apple-gray-300 rounded-full;
+    @apply transition-all duration-200;
+  }
+
+  .resizer:hover::before {
+    @apply bg-apple-blue h-16 w-1.5;
+  }
+}
+
+/* ===== Markdown 内容样式 ===== */
+@layer utilities {
+  .markdown-body {
+    @apply text-apple-gray-900 leading-relaxed;
+  }
+
+  .markdown-body h1 {
+    @apply text-4xl font-bold mb-6 mt-8 text-apple-gray-900;
+    letter-spacing: -0.02em;
+  }
+
+  .markdown-body h2 {
+    @apply text-3xl font-bold mb-5 mt-7 text-apple-gray-900;
+    letter-spacing: -0.01em;
+  }
+
+  .markdown-body h3 {
+    @apply text-2xl font-semibold mb-4 mt-6 text-apple-gray-900;
+  }
+
+  .markdown-body h4 {
+    @apply text-xl font-semibold mb-3 mt-5 text-apple-gray-900;
+  }
+
+  .markdown-body p {
+    @apply mb-4 text-base leading-7;
+  }
+
+  .markdown-body ul, 
+  .markdown-body ol {
+    @apply mb-4 ml-6;
+  }
+
+  .markdown-body li {
+    @apply mb-2;
+  }
+
+  .markdown-body code {
+    @apply px-1.5 py-0.5 bg-apple-gray-100 text-apple-blue rounded text-sm font-mono;
+  }
+
+  .markdown-body pre {
+    @apply bg-apple-gray-900 text-white rounded-apple p-4 mb-4 overflow-x-auto;
+  }
+
+  .markdown-body pre code {
+    @apply bg-transparent text-white px-0 py-0;
+  }
+
+  .markdown-body blockquote {
+    @apply border-l-4 border-apple-blue pl-4 italic text-apple-gray-600 mb-4;
+  }
+
+  .markdown-body a {
+    @apply text-apple-blue hover:underline;
+  }
+
+  .markdown-body hr {
+    @apply border-apple-gray-200 my-8;
+  }
+
+  .markdown-body table {
+    @apply w-full mb-4 border-collapse;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    @apply border border-apple-gray-200 px-4 py-2;
+  }
+
+  .markdown-body th {
+    @apply bg-apple-gray-50 font-semibold;
+  }
+
+  /* KaTeX 公式样式优化 */
+  .markdown-body .katex-display {
+    @apply my-6;
+  }
+
+  .markdown-body .katex {
+    @apply text-apple-gray-900;
+  }
+}
+
+/* ===== 打印样式 (PDF 导出专用) ===== */
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html, body {
+    @apply bg-white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* 隐藏所有 UI 元素 */
+  .no-print {
+    display: none !important;
+  }
+
+  /* 预览区域完全匹配预览效果 */
+  .preview-paper {
+    width: 100% !important;
+    min-height: 100vh !important;
+    margin: 0 !important;
+    padding: 2cm !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transform: none !important;
+    page-break-after: auto;
+  }
+
+  /* 确保 KaTeX 公式正确打印 */
+  .katex {
+    font-size: 1.1em !important;
+  }
+
+  .katex-display {
+    overflow: visible !important;
+    margin: 1em 0 !important;
+  }
+
+  /* 避免内容被截断 */
+  .markdown-body h1,
+  .markdown-body h2,
+  .markdown-body h3,
+  .markdown-body h4,
+  .markdown-body h5,
+  .markdown-body h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  .markdown-body pre,
+  .markdown-body blockquote,
+  .markdown-body table {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  .markdown-body p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  /* 优化链接打印效果 */
+  .markdown-body a {
+    text-decoration: underline;
+    color: #007AFF;
+  }
+
+  /* 保持表格样式 */
+  .markdown-body table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .markdown-body th,
+  .markdown-body td {
+    border: 1px solid #ddd;
+    padding: 8px;
+  }
+
+  .markdown-body th {
+    background-color: #f3f4f6 !important;
+  }
+}
+
+/* ===== 滚动条美化 (Apple 风格 - 完全隐藏) ===== */
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* Chrome, Safari, Edge */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: transparent;
+}
+
+/* ===== 动画效果 ===== */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    to right,
+    #f3f4f6 0%,
+    #e5e7eb 20%,
+    #f3f4f6 40%,
+    #f3f4f6 100%
+  );
+  background-size: 1000px 100%;
+}
