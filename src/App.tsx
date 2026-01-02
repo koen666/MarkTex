@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { FileText, Download, GripVertical, PanelLeftClose, PanelLeft } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
+import { saveWorkspace, loadWorkspace, deserializeFiles } from './utils/storage';
 import Editor from './components/Editor';
 import Preview from './components/Preview';
 import FileExplorer from './components/FileExplorer';
@@ -91,6 +92,10 @@ function App() {
   const [fileSystem, setFileSystem] = useState<Record<string, VirtualFile>>({
     'main.md': { id: 'main.md', content: DEFAULT_CONTENT }
   });
+  const [files, setFiles] = useState<any[]>([
+    { id: 'main.md', name: 'main.md', type: 'file', content: DEFAULT_CONTENT },
+    { id: 'assets', name: 'assets', type: 'folder', children: [] },
+  ]);
   const [currentFile, setCurrentFile] = useState('main.md');
   const [content, setContent] = useState(DEFAULT_CONTENT);
   const [leftWidth, setLeftWidth] = useState(50);
@@ -98,6 +103,9 @@ function App() {
   const sidebarWidth = 250;
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [sidebarSplitHeight, setSidebarSplitHeight] = useState(50); // 侧边栏分割百分比
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [isSidebarResizing, setIsSidebarResizing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -265,6 +273,54 @@ function App() {
     };
   }, [isSidebarResizing, handleSidebarResizeMove, handleSidebarResizeEnd]);
 
+  // Hydrate workspace from IndexedDB on mount
+  useEffect(() => {
+    const hydrateWorkspace = async () => {
+      try {
+        const savedData = await loadWorkspace();
+        if (savedData && savedData.files) {
+          const { files: restoredFiles, fileSystem: restoredFileSystem } = 
+            deserializeFiles(savedData.files);
+          
+          setFiles(restoredFiles);
+          setFileSystem(restoredFileSystem);
+          setCurrentFile(savedData.currentFile || 'main.md');
+          
+          // Set content from restored file system
+          const restoredContent = restoredFileSystem[savedData.currentFile]?.content || DEFAULT_CONTENT;
+          setContent(restoredContent);
+          
+          setLastSaved(new Date(savedData.timestamp));
+        }
+      } catch (error) {
+        console.error('Failed to hydrate workspace:', error);
+      } finally {
+        setIsHydrated(true);
+      }
+    };
+
+    hydrateWorkspace();
+  }, []);
+
+  // Auto-save with debouncing
+  useEffect(() => {
+    if (!isHydrated) return; // Don't save during initial hydration
+
+    const saveTimer = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        await saveWorkspace(files, fileSystem, currentFile);
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 1000); // Debounce: 1 second
+
+    return () => clearTimeout(saveTimer);
+  }, [files, fileSystem, currentFile, isHydrated]);
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gradient-to-br from-apple-gray-50 to-apple-gray-100">
       {/* 顶部导航栏 - 毛玻璃效果 */}
@@ -319,6 +375,8 @@ function App() {
                 currentFile={currentFile}
                 onFileSelect={handleFileSelect}
                 onFileUpdate={handleFileUpdate}
+                files={files}
+                onFilesChange={setFiles}
               />
             </div>
 
@@ -384,6 +442,13 @@ function App() {
         <div className="flex items-center gap-4">
           <span>字符数: {content.length}</span>
           <span>行数: {content.split('\n').length}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {isSaving ? (
+            <span className="text-apple-blue">保存中...</span>
+          ) : lastSaved ? (
+            <span>已保存 {Math.floor((Date.now() - lastSaved.getTime()) / 1000)}秒前</span>
+          ) : null}
         </div>
       </footer>
     </div>

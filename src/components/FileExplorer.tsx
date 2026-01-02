@@ -14,23 +14,18 @@ interface FileExplorerProps {
   currentFile: string;
   onFileSelect: (fileId: string, content: string) => void;
   onFileUpdate: (fileId: string, content: string) => void;
+  files: FileNode[];
+  onFilesChange: (files: FileNode[]) => void;
 }
 
-export default function FileExplorer({ currentFile, onFileSelect, onFileUpdate }: FileExplorerProps) {
-  const [files, setFiles] = useState<FileNode[]>([
-    {
-      id: 'main.md',
-      name: 'main.md',
-      type: 'file',
-      content: '',
-    },
-    {
-      id: 'assets',
-      name: 'assets',
-      type: 'folder',
-      children: [],
-    },
-  ]);
+export default function FileExplorer({ currentFile, onFileSelect, onFileUpdate, files, onFilesChange }: FileExplorerProps) {
+  const setFiles = (filesOrUpdater: FileNode[] | ((prev: FileNode[]) => FileNode[])) => {
+    if (typeof filesOrUpdater === 'function') {
+      onFilesChange(filesOrUpdater(files));
+    } else {
+      onFilesChange(filesOrUpdater);
+    }
+  };
   
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['assets']));
   const [dragOver, setDragOver] = useState(false);
