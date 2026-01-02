@@ -130,7 +130,7 @@ export default function Preview({ content, fileSystem }: PreviewProps) {
     <div
       ref={viewportRef}
       className="relative h-full w-full overflow-auto"
-      style={{ background: '#525659' }}
+      style={{ background: '#ffffff' }}
     >
       {/* Layer: Transformable content */}
       <div className="flex justify-center items-start px-8 py-8">
